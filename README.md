@@ -15,8 +15,6 @@ This project was developed as a skills demonstration for the **dAIbetes – Mach
 * **End-to-End Pipeline:** From raw MIMIC-IV data to a trained, interpretable model.
 * **Interpretable AI:** Implementation of the RETAIN model to identify key clinical risk factors driving predictions.
 * **Performance Baseline:** An LSTM model is included for a direct performance comparison against a standard deep learning architecture.
-* **Reproducible Environment:** Includes an `environment.yml` file for easy setup using Conda.
-* **HPC Ready:** Scripts are designed to be run on High-Performance Computing clusters.
 
 ---
 
@@ -109,9 +107,7 @@ cd dAIbetes_project
 ```
 
 **2. Create the Conda Environment**
-This command uses the `environment.yml` file to install all necessary packages.
 ```bash
-conda env create -f environment.yml
 conda activate daibetes-env
 ```
 
