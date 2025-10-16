@@ -26,9 +26,6 @@ This project utilizes the **MIMIC-IV Clinical Database (v2.2)**, a large, de-ide
 * **Task:** Predict if a patient will be diagnosed with T2D based on their prior sequence of ICD diagnosis codes.
 * **Outcome:** The label is positive (1) if a patient has a recorded T2D diagnosis (ICD-9 codes starting with `250` or ICD-10 codes starting with `E11`).
 
-> **Note:** Access to the MIMIC-IV dataset is required and can be obtained through the [PhysioNet Credentialing process]([https://physionet.org/content/mimiciv/latest/](https://physionet.org/content/mimiciv/3.1/)).
-> **Note:** Access to the MIMIC-IV dataset is required and can be obtained through the [PhysioNet Credentialing process]().
-
 ---
 
 ## 📂 Project Structure
