@@ -1,146 +1,145 @@
-# Predicting Type 2 Diabetes with an Interpretable Deep Learning Model
+# Interpretable Type 2 Diabetes Prediction
 
-![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)
-![Framework PyTorch](https://img.shields.io/badge/Framework-PyTorch-orange.svg)
-![License MIT](https://img.shields.io/badge/License-MIT-green.svg)
+PyTorch sequence models for exploring diabetes prediction from electronic health records, with an LSTM baseline and a dual-attention model inspired by RETAIN.
 
-This repository contains the source code for an end-to-end deep learning project aimed at predicting the future onset of Type 2 Diabetes (T2D) from longitudinal Electronic Health Record (EHR) data. The core of this project is the implementation of the **RETAIN (Reverse Time Attention Model)**, an interpretable architecture that provides insight into its decision-making process.
+**Research prototype · Python · PyTorch · Electronic health records · Interpretable ML**
 
-This project was developed as a skills demonstration for the **dAIbetes – Machine Learning for Type 2 Diabetes Research (ID 2514)** position.
+## Problem & Motivation
 
----
+Patient records contain diagnosis histories of different lengths. A useful modeling workflow needs to turn these histories into model inputs and make the factors behind a prediction inspectable.
 
-## 🎯 Key Features
+This project explores that workflow using MIMIC-IV diagnosis records. It combines data preprocessing, sequence classification, and an example attention-based visualization. The current implementation is a learning and research prototype; it does not establish clinical effectiveness or performance on unseen patients.
 
-* **End-to-End Pipeline:** From raw MIMIC-IV data to a trained, interpretable model.
-* **Interpretable AI:** Implementation of the RETAIN model to identify key clinical risk factors driving predictions.
-* **Performance Baseline:** An LSTM model is included for a direct performance comparison against a standard deep learning architecture.
+## Approach
 
----
+1. **Prepare records:** Load patient, admission, and diagnosis tables; filter patients using `anchor_age >= 18`.
+2. **Construct labels and histories:** Identify recorded diagnoses using the implemented `250` and `E11` code-prefix rules. For positive cases, retain history more than 365 days before the first matching admission. For negative cases, use available diagnosis history. Exclude cases with no retained history.
+3. **Encode inputs:** Map diagnosis codes to integer IDs and pad variable-length sequences for batching.
+4. **Train models:** Compare an LSTM classifier with a two-GRU attention model named `RETAIN` in the code. Both use learned code embeddings and binary cross-entropy training.
+5. **Inspect an example:** Select a correctly classified positive case from the supplied dataset and plot attention-weighted embedding scores for its diagnosis codes.
 
-## 🏥 Dataset
+The implementation includes the preprocessing, model definitions, training loop, data loader, and visualization script. It uses PyTorch's recurrent layers rather than implementing recurrent networks from scratch.
 
-This project utilizes the **MIMIC-IV Clinical Database (v2.2)**, a large, de-identified database of patient data from a US-based hospital.
+### Implementation scope
 
-* **Cohort:** Adult patients (age ≥ 18 at first admission).
-* **Task:** Predict if a patient will be diagnosed with T2D based on their prior sequence of ICD diagnosis codes.
-* **Outcome:** The label is positive (1) if a patient has a recorded T2D diagnosis (ICD-9 codes starting with `250` or ICD-10 codes starting with `E11`).
+Inputs are flat diagnosis-code sequences, not grouped visits. The preprocessing script does not explicitly sort records by admission time, and the attention model does not reverse its input sequence. The current model should therefore be understood as a RETAIN-inspired implementation, not a verified reproduction of the original architecture.
 
----
+The code-prefix labeling rule, code-system handling, and different history windows for positive and negative cases require review before treating this as a validated future-onset prediction task.
 
-## 📂 Project Structure
+## Technologies
 
-The repository is organized using a standard project structure to ensure clarity and maintainability.
+| Technology | Role |
+|---|---|
+| Python 3.10+ | Preprocessing, training, and interpretation scripts |
+| PyTorch | Embeddings, LSTM/GRU layers, attention, and optimization |
+| pandas and NumPy | Record processing and numerical operations |
+| scikit-learn | Training ROC-AUC calculation |
+| Matplotlib | Example interpretation plots |
+| tqdm | Preprocessing and training progress |
+| MIMIC-IV | Source patient, admission, and diagnosis records |
 
-```
-dAIbetes_project/
-│
-├── .gitignore               # --- Specifies files for Git to ignore
-├── README.md                # --- This project overview
-├── environment.yml          # --- Conda environment for reproducibility
-│
-├── data/                    # --- (Ignored by Git) All project data
-│   ├── raw/                 # --- Original MIMIC-IV CSVs
-│   └── processed/           # --- Output of the preprocessing script
-│
-├── models/                  # --- (Ignored by Git) Trained model .pth files
-│
-├── results/                 # --- Output plots and figures
-│   └── interpretation_plot.png
-│
-├── scripts/                 # --- Helper scripts (e.g., Slurm templates)
-│   ├── run_preprocess.sbatch.template
-│   └── run_training.sbatch.template
-│
-└── src/                     # --- All Python source code
-    ├── __init__.py
-    ├── preprocess.py        # --- Script for data cleaning and cohort creation
-    ├── models.py            # --- PyTorch model definitions (LSTM, RETAIN)
-    ├── train.py             # --- Script for model training
-    ├── utils.py             # --- Data loading and helper functions
-    └── interpret.py         # --- Script to generate attention-based plots
-```
+Python 3.10 or newer is required by the type-annotation syntax in `src/models.py`. The repository does not currently include a pinned dependency environment.
 
----
+## How to Run
 
-## 🛠️ Methodology
+### 1. Set up the project
 
-1.  **Preprocessing:** A cohort of adult patients was extracted from MIMIC-IV. For each patient, a chronological sequence of all recorded ICD diagnosis codes was constructed. Labels were assigned based on the presence of a T2D diagnosis, using a one-year washout period to ensure the model predicts a future onset.
-
-2.  **Modeling:** Two deep learning models were implemented in PyTorch:
-    * **LSTM Baseline:** A standard Long Short-Term Memory network to establish a performance baseline.
-    * **RETAIN:** An interpretable model that uses two GRUs to generate attention weights at both the visit level (which visit is important?) and the code level (which diagnosis is important?). This allows us to trace the prediction back to specific clinical events.
-
----
-
-## 📊 Results & Interpretation
-
-Both models were trained for 20 epochs on the preprocessed dataset. The performance was evaluated using the Area Under the Receiver Operating Characteristic Curve (AUC-ROC).
-
-| Model      | Final Training AUC |
-| :--------- | :----------------: |
-| LSTM       |       0.9931       |
-| **RETAIN** |     **0.9987** |
-
-The RETAIN model not only achieved a slightly higher AUC, demonstrating state-of-the-art predictive performance, but its primary advantage is its interpretability.
-
-### Model Interpretation
-
-The model's interpretability allows us to inspect the drivers of its prediction for any given patient. The plot below shows the top 10 medical codes that contributed most significantly to a positive T2D prediction for a sample patient.
-
-
-
-**Analysis:** The model has learned clinically relevant patterns. It correctly identified well-known comorbidities and risk factors for Type 2 Diabetes, such as **Depressive Disorder (ICD code `311`)**, **Hyperlipidemia (code `2724`)**, and **Obstructive Sleep Apnea (code `32723`)**, as the most important factors for this patient's prediction. This transparency is crucial for building trust and validating the model's clinical utility.
-
----
-
-## 🚀 Installation & Usage
-
-Follow these steps to reproduce the project results.
-
-**1. Clone the Repository**
 ```bash
-git clone [https://github.com/your-username/dAIbetes_project.git](https://github.com/your-username/dAIbetes_project.git)
-cd dAIbetes_project
+git clone https://github.com/pashaeimehran/interpretable-type-2-diabetes-prediction.git
+cd interpretable-type-2-diabetes-prediction
+python -m venv .venv
 ```
 
-**2. Create the Conda Environment**
+Activate the environment on Linux/macOS:
+
 ```bash
-conda activate daibetes-env
+source .venv/bin/activate
 ```
 
-**3. Download Data**
-Download the MIMIC-IV dataset from PhysioNet and place the `.csv.gz` files into the `data/raw/hosp/` directory.
+Or on Windows PowerShell:
 
-**4. Run Data Preprocessing**
-This script will generate the `processed_t2d_data.pkl` file in the `data/processed/` directory.
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Install the packages used by the scripts:
+
 ```bash
-python src/preprocess.py \
-    --mimic_dir ./data/raw/ \
-    --output_dir ./data/processed/
+python -m pip install torch pandas numpy scikit-learn matplotlib tqdm
 ```
 
-**5. Train the Models**
-Run the training script for the desired model. The trained model will be saved in the `models/` directory.
+These are dependency setup instructions, not a pinned reproduction of the original training environment. GPU use depends on your PyTorch installation; the training script selects CUDA when available and otherwise uses the CPU.
+
+### 2. Prepare the data
+
+Obtain MIMIC-IV through its official access process. The original project documentation identifies version 2.2. Patient data and trained model weights are not included in this repository.
+
+Place the required files at:
+
+```text
+data/raw/hosp/patients.csv.gz
+data/raw/hosp/admissions.csv.gz
+data/raw/hosp/diagnoses_icd.csv.gz
+```
+
+Keep patient data, generated datasets, and checkpoints out of public commits. Run all following commands from the repository root.
+
+### 3. Preprocess and train
+
 ```bash
-# Train the RETAIN model
-python src/train.py \
-    --data_path ./data/processed/processed_t2d_data.pkl \
-    --model RETAIN \
-    --output_dir ./models/
-
-# Train the LSTM model
-python src/train.py \
-    --data_path ./data/processed/processed_t2d_data.pkl \
-    --model LSTM \
-    --output_dir ./models/
+python src/preprocess.py --mimic_dir ./data/raw --output_dir ./data/processed
+python src/train.py --data_path ./data/processed/processed_t2d_data.pkl --model LSTM --output_dir ./models --epochs 20
+python src/train.py --data_path ./data/processed/processed_t2d_data.pkl --model RETAIN --output_dir ./models --epochs 20
 ```
 
-**6. Generate Interpretation Plot**
-Run the interpretation script on a trained RETAIN model to generate the contribution plot.
+Expected outputs are `data/processed/processed_t2d_data.pkl`, `models/LSTM_final.pth`, and `models/RETAIN_final.pth`. Training duration depends on the retained cohort and hardware.
+
+### 4. Generate an example visualization
+
 ```bash
-python src/interpret.py \
-    --data_path ./data/processed/processed_t2d_data.pkl \
-    --model_path ./models/RETAIN_final.pth \
-    --output_dir ./results/
+python src/interpret.py --data_path ./data/processed/processed_t2d_data.pkl --model_path ./models/RETAIN_final.pth --output_dir ./results
 ```
+
+The script writes `results/interpretation_patient_<index>.png` if it finds a positive case that the model classifies above the 0.5 threshold. Otherwise, it reports that no suitable case was found.
+
+## Results & Limitations
+
+### Previously reported training results
+
+The original project README reported the following values after 20 epochs:
+
+| Model name in the code | Reported training ROC-AUC |
+|---|---:|
+| LSTM | 0.9931 |
+| RETAIN | 0.9987 |
+
+These are training metrics, not held-out validation or test results. The current training script accumulates predictions during optimization and computes an epoch-level training AUC. It does not evaluate a separate validation or test set. Original run logs and checkpoints are not bundled, so these historical values cannot be independently checked from the repository alone.
+
+### Example interpretation artifact
+
+![Example diagnosis-code visualization from the original project](results/interpretation_plot.png)
+
+The repository contains this example image. The interpretation script sums attention-weighted embedding components but does not include the final classifier weights in those scores. Treat the visualization as an exploratory view of internal model quantities, not a verified decomposition of the prediction or evidence of causal clinical risk factors.
+
+### Current limitations
+
+- No patient-level train/validation/test evaluation is implemented.
+- Chronological ordering, label definitions, and observation windows need review.
+- The flat-sequence attention implementation differs from visit-based reverse-time modeling.
+- Padding is not explicitly masked in attention or handled with sequence lengths in the LSTM's final-state selection.
+- Clinical utility and generalization have not been established by the supplied results.
+
+## Repository Guide
+
+| File | Purpose |
+|---|---|
+| [`src/preprocess.py`](src/preprocess.py) | Record loading, cohort construction, labeling, and encoding |
+| [`src/models.py`](src/models.py) | LSTM and RETAIN-inspired model definitions |
+| [`src/utils.py`](src/utils.py) | Dataset, padding, and data loading |
+| [`src/train.py`](src/train.py) | Training and checkpoint saving |
+| [`src/interpret.py`](src/interpret.py) | Example attention-based visualization |
+| [`results/interpretation_plot.png`](results/interpretation_plot.png) | Existing example image |
+
+## License
+
+Code is provided under the [MIT License](LICENSE). Dataset access and use are governed separately by the data provider's terms.
